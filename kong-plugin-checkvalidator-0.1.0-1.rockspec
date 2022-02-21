@@ -12,7 +12,7 @@ local pluginName = "checkvalidator"  -- "myPlugin"
 supported_platforms = {"linux", "macosx"}
 source = {
   url = "https://github.com/joaocarvoli/CheckValidator-KongPlugin.git",
-  branch = "tests3",
+  branch = "main",
 --  tag = "0.1.0"
 -- hint: "tag" could be used to match tag in the repository
 }
