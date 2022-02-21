@@ -1,4 +1,10 @@
 return {
-  name = "checkValidator",
-  fields = {}
+  name = "checkvalidator",
+  fields = {
+    { config = {
+        type = "record",
+        fields = {}
+      }
+    }
+  }
 }

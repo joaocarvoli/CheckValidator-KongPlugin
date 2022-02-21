@@ -7,12 +7,12 @@ version = "0.1.0-1"               -- hint: renumber, must match the info in the 
 
 -- TODO: This is the name to set in the Kong configuration `plugins` setting.
 -- Here we extract it from the package name.
-local pluginName = package:match("^kong%-plugin%-(.+)$")  -- "myPlugin"
+local pluginName = "checkvalidator"  -- "myPlugin"
 
 supported_platforms = {"linux", "macosx"}
 source = {
   url = "https://github.com/joaocarvoli/CheckValidator-KongPlugin.git",
-  branch = "main",
+  branch = "tests3",
 --  tag = "0.1.0"
 -- hint: "tag" could be used to match tag in the repository
 }
