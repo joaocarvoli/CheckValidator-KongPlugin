@@ -1,0 +1,73 @@
+FROM ubuntu:focal
+
+ARG ASSET=ce
+ENV ASSET $ASSET
+
+ARG EE_PORTS
+
+COPY kong.deb /tmp/kong.deb
+
+ARG KONG_VERSION=2.7.1
+ENV KONG_VERSION $KONG_VERSION
+
+ARG KONG_SHA256="feeee661bbe44cf3ca2d4b748291dd3f9153f355fbc13ffeccb6fbc036249a89"
+
+# hadolint ignore=DL3015
+RUN set -ex \
+    && apt-get update \
+    && if [ "$ASSET" = "ce" ] ; then \
+      apt-get install -y curl \
+      && UBUNTU_CODENAME=$(cat /etc/os-release | grep UBUNTU_CODENAME | cut -d = -f 2) \
+      && curl -fL https://download.konghq.com/gateway-${KONG_VERSION%%.*}.x-ubuntu-${UBUNTU_CODENAME}/pool/all/k/kong/kong_${KONG_VERSION}_amd64.deb -o /tmp/kong.deb \
+      && apt-get purge -y curl \
+      && echo "$KONG_SHA256  /tmp/kong.deb" | sha256sum -c -; \
+    else \
+      # this needs to stay inside this "else" block so that it does not become part of the "official images" builds (https://github.com/docker-library/official-images/pull/11532#issuecomment-996219700)
+      apt-get upgrade -y ; \
+    fi; \
+    apt-get install -y --no-install-recommends unzip git \
+    # Please update the ubuntu install docs if the below line is changed so that
+    # end users can properly install Kong along with its required dependencies
+    # and that our CI does not diverge from our docs.
+    && apt install --yes /tmp/kong.deb \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/kong.deb \
+    && chown kong:0 /usr/local/bin/kong \
+    && chown -R kong:0 /usr/local/kong \
+    && ln -s /usr/local/openresty/bin/resty /usr/local/bin/resty \
+    && ln -s /usr/local/openresty/luajit/bin/luajit /usr/local/bin/luajit \
+    && ln -s /usr/local/openresty/luajit/bin/luajit /usr/local/bin/lua \
+    && ln -s /usr/local/openresty/nginx/sbin/nginx /usr/local/bin/nginx \
+    && if [ "$ASSET" = "ce" ] ; then \
+      kong version ; \
+    fi
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# Plugin checkvalidator
+ENV DEBIAN_FRONTEND noninteractive
+
+
+RUN apt update
+RUN apt upgrade -y
+RUN apt install curl -y
+#RUN apt install luarocks -y
+#RUN dpkg --configure -a
+#RUN apt-get install -y luarocks
+COPY ./plugin/checkvalidator.sh /checkvalidator.sh
+COPY checkvalidator /checkvalidator
+RUN cd checkvalidator; luarocks make; cd ..
+
+RUN echo "plugins = checkvalidator" >> /etc/kong/kong.conf.default
+
+USER kong
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+EXPOSE 8000 8443 8001 8444 $EE_PORTS
+
+STOPSIGNAL SIGQUIT
+
+HEALTHCHECK --interval=10s --timeout=10s --retries=10 CMD kong health
+
+CMD ["kong", "docker-start"]
